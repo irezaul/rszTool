@@ -19,7 +19,7 @@ type FlashTool struct {
 
 func main() {
     myApp := app.New()
-    myWindow := myApp.NewWindow("Android Tool")
+    myWindow := myApp.NewWindow("RSZ Tool")
     
     tool := &FlashTool{
         window: myWindow,
@@ -33,11 +33,22 @@ func main() {
 func (t *FlashTool) createUI() {
     // Create log output
     t.logOutput = widget.NewMultiLineEntry()
-    t.logOutput.SetPlaceHolder("Logs will appear here...")
+    t.logOutput.SetPlaceHolder(`Logs will appear here...
+
+Common codes to enable DM/DIAG mode (if needed):
+
+*#*#717717#*#*  (Common for Xiaomi/Redmi)
+
+*#*#83781#*#*   (Huawei)
+
+*#*#4636#*#* Phone Info → Turn on "DM Mode"
+`)
     t.logOutput.Wrapping = fyne.TextWrapWord
 
     // Create Fastboot tab content
     fastbootTab := t.createFastbootTab()
+
+    // firmwareTab := t.createFirmwareTab()
 
     // Create ADB tab content
     adbTab := t.createADBTab()
@@ -45,6 +56,7 @@ func (t *FlashTool) createUI() {
     // Create tabs
     tabs := container.NewAppTabs(
         container.NewTabItem("Fastboot", fastbootTab),
+        // container.NewTabItem("Firmware", firmwareTab),
         container.NewTabItem("ADB", adbTab),
     )
     tabs.SetTabLocation(container.TabLocationTop)
@@ -142,16 +154,24 @@ func (t *FlashTool) createADBTab() fyne.CanvasObject {
     rebootRecoveryButton := widget.NewButton("Reboot Recovery", func() {
         go t.adbRebootRecovery()
     })
+        diagButton := widget.NewButton("Enable DIAG", func() {
+        go t.adbEnableDiag()
+    })
 
     // Create grid layout for ADB buttons
-    return container.NewGridWithColumns(5,
+    return container.NewGridWithColumns(6,
         deviceButton,
         infoButton,
         rebootButton,
         rebootFastbootButton,
         rebootRecoveryButton,
+        diagButton,
     )
 }
+
+
+
+
 
 func (t *FlashTool) appendLog(message string) {
     currentText := t.logOutput.Text

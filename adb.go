@@ -7,12 +7,12 @@ import (
     "time"
 )
 
-// Enhanced device connection check
-func (t *FlashTool) isADBDeviceConnected() (bool, string) {
+// Check if ADB device is connected
+func (t *FlashTool) isADBDeviceConnected() (bool, string, string) {
     cmd := exec.Command("adb", "devices")
     output, err := cmd.CombinedOutput()
     if err != nil {
-        return false, "Error executing ADB command"
+        return false, "", "ADB not responding"
     }
 
     lines := strings.Split(string(output), "\n")
@@ -23,213 +23,200 @@ func (t *FlashTool) isADBDeviceConnected() (bool, string) {
             if len(parts) >= 2 {
                 switch parts[1] {
                 case "device":
-                    return true, parts[0] // Return true and device ID
+                    return true, parts[0], "Connected"
                 case "unauthorized":
-                    return false, "Device unauthorized"
+                    return false, parts[0], "Unauthorized (Check USB debugging)"
                 case "offline":
-                    return false, "Device offline"
+                    return false, parts[0], "Device offline (reconnect USB)"
                 }
             }
         }
     }
-    return false, "No device connected"
+
+    return false, "", "No device connected"
 }
 
-func (t *FlashTool) checkADBDevice() {
+// ✅ Enable DIAG mode without root (if possible)
+func (t *FlashTool) adbEnableDiag() {
     t.logOutput.SetText("")
-    t.appendLog("=== ADB Device Check ===")
-    t.appendLog("Checking device connection...")
 
-    connected, status := t.isADBDeviceConnected()
-    if connected {
-        t.appendLog("Status    : ✅ Device Connected")
-        t.appendLog(fmt.Sprintf("Device ID : %s", status))
-        
-        // Get additional device info
-        if model := t.getDeviceProp("ro.product.model"); model != "" {
-            t.appendLog(fmt.Sprintf("Model     : %s", model))
-        }
-        if brand := t.getDeviceProp("ro.product.brand"); brand != "" {
-            t.appendLog(fmt.Sprintf("Brand     : %s", brand))
-        }
-    } else {
-        t.appendLog("Status    : ❌ Device Disconnected")
-        t.appendLog(fmt.Sprintf("Reason    : %s", status))
-        t.appendLog("\nTroubleshooting:")
-        t.appendLog("1. Check USB connection")
-        t.appendLog("2. Enable USB debugging")
-        t.appendLog("3. Accept USB debugging prompt on device")
-        t.appendLog("4. Try different USB port/cable")
-    }
-}
-
-// Helper function to get device property
-func (t *FlashTool) getDeviceProp(prop string) string {
-    cmd := exec.Command("adb", "shell", "getprop", prop)
-    output, err := cmd.CombinedOutput()
-    if err == nil {
-        return strings.TrimSpace(string(output))
-    }
-    return ""
-}
-
-func (t *FlashTool) getADBInfo() {
-    t.logOutput.SetText("")
-    connected, status := t.isADBDeviceConnected()
+    connected, deviceID, status := t.isADBDeviceConnected()
     if !connected {
-        t.appendLog("=== Device Information ===")
-        t.appendLog("❌ Connection Error")
-        t.appendLog(fmt.Sprintf("Details: %s", status))
-        t.appendLog("\nPlease ensure:")
-        t.appendLog("1. Device is connected via USB")
-        t.appendLog("2. USB debugging is enabled")
-        t.appendLog("3. Device is unlocked")
+        t.appendLog("❌ No device connected")
+        t.appendLog(fmt.Sprintf("Reason: %s", status))
         return
     }
 
-    startTime := time.Now()
-    t.appendLog("Read Device Info Result:")
-    t.appendLog("=== Device Information ===")
+    t.appendLog("🚀 Attempting to enable DIAG mode...")
+    t.appendLog(fmt.Sprintf("Device ID: %s", deviceID))
 
-    // Enhanced device properties
-    props := []struct {
-        label string
-        cmd   string
-        type_ string // "prop" or "cmd"
-    }{
-        {"Brand", "ro.product.brand", "prop"},
-        {"Model", "ro.product.model", "prop"},
-        {"Device", "ro.product.device", "prop"},
-        {"Hardware level", "ro.boot.hwlevel", "prop"},
-        {"Android Version", "ro.build.version.release", "prop"},
-        {"Security Patch", "ro.build.version.security_patch", "prop"},
-        {"Build Number", "ro.build.display.id", "prop"},
-        {"CPU Architecture", "ro.product.cpu.abi", "prop"},
-        {"RAM", "cat /proc/meminfo | grep MemTotal", "cmd"},
-        {"Storage", "df -h /data", "cmd"},
-       
-        {"Battery Level", "", "battery"},
+    // Run commands to attempt diag activation
+    cmds := [][]string{
+        {"shell", "am", "start", "-n", "com.longcheertel.midtest/com.longcheertel.midtest.Diag"},
         
+    }
+
+    for _, args := range cmds {
+        err := exec.Command("adb", args...).Run()
+        if err != nil {
+            t.appendLog(fmt.Sprintf("⚠️ Failed: adb %s", "Failed to connect"))
+        } else {
+            t.appendLog(fmt.Sprintf("✅ Success: adb %s",  "Enabled DIAG mode"))
+        }
+    }
+
+    time.Sleep(1 * time.Second)
+
+    // Verify that diag was enabled
+    out, err := exec.Command("shell", "am", "start", "-n", "com.longcheertel.midtest/com.longcheertel.midtest.Diag").CombinedOutput()
+    if err == nil {
+        value := strings.TrimSpace(string(out))
+        t.appendLog(fmt.Sprintf("🔍 Current USB Config: %s", value))
+        if strings.Contains(value, "diag") {
+            t.appendLog("✅ DIAG mode looks active!")
+        } else {
+            t.appendLog("⚠️ DIAG not confirmed. Device may need reboot.")
+        }
+    }
+
+    t.appendLog("📌 Tip: Check Windows Device Manager > Ports (COM) for Qualcomm DIAG port.")
+    
+    t.appendLog("📌 Note: This method works only on some Qualcomm devices (no root needed).")
+}
+
+// ✅ Display basic device connection
+func (t *FlashTool) checkADBDevice() {
+    t.logOutput.SetText("")
+    connected, deviceID, status := t.isADBDeviceConnected()
+    if !connected {
+        t.appendLog("❌ No ADB device detected")
+        t.appendLog(fmt.Sprintf("Status: %s", status))
+        return
+    }
+
+    t.appendLog("✅ Device Connected")
+    t.appendLog(fmt.Sprintf("Device ID : %s", deviceID))
+    t.appendLog(fmt.Sprintf("Status    : %s", status))
+    t.appendLog(fmt.Sprintf("Time      : %s", time.Now().Format("15:04:05")))
+}
+
+// ✅ Show detailed ADB info
+func (t *FlashTool) getADBInfo() {
+    t.logOutput.SetText("")
+    connected, _, status := t.isADBDeviceConnected()
+    if !connected {
+        t.appendLog("❌ Cannot read device info - not connected")
+        t.appendLog(fmt.Sprintf("Status: %s", status))
+        return
+    }
+
+    start := time.Now()
+    t.appendLog("💡 Reading device information...")
+
+    props := []struct {
+        Label string
+        Prop  string
+    }{
+        {"Brand", "ro.product.brand"},
+        {"Model", "ro.product.model"},
+        {"Device", "ro.product.device"},
+        {"Android Version", "ro.build.version.release"},
+        {"Build Number", "ro.build.display.id"},
+        {"Security Patch", "ro.build.version.security_patch"},
+        {"CPU", "ro.product.cpu.abi"},
+        {"Bootloader", "ro.bootloader"},
+        {"Battery Level", ""}, // special case
     }
 
     for _, prop := range props {
         var value string
-        switch prop.type_ {
-        case "prop":
-            value = t.getDeviceProp(prop.cmd)
-        case "cmd":
-            cmd := exec.Command("adb", "shell", prop.cmd)
-            output, err := cmd.CombinedOutput()
-            if err == nil {
-                value = strings.TrimSpace(string(output))
-                // Process specific outputs
-                switch prop.label {
-                case "RAM":
-                    if parts := strings.Fields(value); len(parts) >= 2 {
-                        value = parts[1] + " " + parts[2]
-                    }
-                case "Storage":
-                    lines := strings.Split(value, "\n")
-                    if len(lines) > 1 {
-                        fields := strings.Fields(lines[1])
-                        if len(fields) >= 4 {
-                            value = fmt.Sprintf("Total: %s, Used: %s, Free: %s", fields[1], fields[2], fields[3])
-                        }
-                    }
-                }
-            }
-        case "battery":
+        if prop.Label == "Battery Level" {
             cmd := exec.Command("adb", "shell", "dumpsys", "battery")
-            output, err := cmd.CombinedOutput()
+            out, err := cmd.CombinedOutput()
             if err == nil {
-                lines := strings.Split(string(output), "\n")
+                lines := strings.Split(string(out), "\n")
                 for _, line := range lines {
                     if strings.Contains(line, "level:") {
-                        value = strings.TrimSpace(strings.Split(line, ":")[1]) + "%"
+                        value = strings.Split(line, ":")[1]
+                        value = strings.TrimSpace(value) + "%"
                         break
                     }
                 }
             }
+        } else {
+            out, err := exec.Command("adb", "shell", "getprop", prop.Prop).CombinedOutput()
+            if err == nil {
+                value = strings.TrimSpace(string(out))
+            }
         }
 
         if value == "" {
-            value = "Not available"
+            value = "Unknown"
         }
-        t.appendLog(fmt.Sprintf("%-20s: %s", prop.label, value))
+
+        t.appendLog(fmt.Sprintf("%-18s: %s", prop.Label, value))
     }
 
-    // Additional system information
-
-  
-
-    executionTime := time.Since(startTime)
-    t.appendLog("\n=== Operation Status ===")
-    t.appendLog("✅ Information gathering completed")
-    t.appendLog(fmt.Sprintf("⏱️ Execution time: %.2fs", executionTime.Seconds()))
+    elapsed := time.Since(start)
+    t.appendLog(fmt.Sprintf("\n✅ Info retrieved in %.2fs", elapsed.Seconds()))
 }
 
+// ✅ Reboot normally
 func (t *FlashTool) adbReboot() {
     t.logOutput.SetText("")
-    connected, status := t.isADBDeviceConnected()
+    connected, _, status := t.isADBDeviceConnected()
     if !connected {
-        t.appendLog("=== Reboot Device ===")
-        t.appendLog("❌ Operation Failed")
-        t.appendLog(fmt.Sprintf("Reason: %s", status))
+        t.appendLog("❌ Cannot reboot - device not connected")
+        t.appendLog(fmt.Sprintf("Status: %s", status))
         return
     }
 
-    t.appendLog("=== Rebooting Device ===")
-    t.appendLog("⏳ Initiating reboot sequence...")
-    cmd := exec.Command("adb", "reboot")
-    if err := cmd.Run(); err != nil {
-        t.appendLog("❌ Reboot failed")
-        t.appendLog(fmt.Sprintf("Error: %v", err))
+    t.appendLog("🔁 Rebooting device...")
+    err := exec.Command("adb", "reboot").Run()
+    if err != nil {
+        t.appendLog(fmt.Sprintf("❌ Reboot failed: %v", err))
         return
     }
-    t.appendLog("✅ Device is rebooting")
-    t.appendLog("Please wait while the device restarts...")
+
+    t.appendLog("✅ Reboot command sent")
 }
 
+// ✅ Reboot to bootloader / fastboot
 func (t *FlashTool) adbRebootFastboot() {
     t.logOutput.SetText("")
-    connected, status := t.isADBDeviceConnected()
+    connected, _, status := t.isADBDeviceConnected()
     if !connected {
-        t.appendLog("=== Reboot to Fastboot ===")
-        t.appendLog("❌ Operation Failed")
-        t.appendLog(fmt.Sprintf("Reason: %s", status))
+        t.appendLog("❌ Cannot reboot to fastboot - no device detected")
+        t.appendLog(fmt.Sprintf("Status: %s", status))
         return
     }
 
-    t.appendLog("=== Rebooting to Fastboot ===")
-    t.appendLog("⏳ Initiating fastboot reboot sequence...")
-    cmd := exec.Command("adb", "reboot", "bootloader")
-    if err := cmd.Run(); err != nil {
-        t.appendLog("❌ Reboot to fastboot failed")
-        t.appendLog(fmt.Sprintf("Error: %v", err))
+    t.appendLog("🚀 Rebooting to fastboot...")
+    err := exec.Command("adb", "reboot", "bootloader").Run()
+    if err != nil {
+        t.appendLog(fmt.Sprintf("❌ Fastboot reboot failed: %v", err))
         return
     }
-    t.appendLog("✅ Device is rebooting to fastboot")
-    t.appendLog("Please wait for fastboot mode...")
+
+    t.appendLog("✅ Fastboot command sent")
 }
 
+// ✅ Reboot to recovery
 func (t *FlashTool) adbRebootRecovery() {
     t.logOutput.SetText("")
-    connected, status := t.isADBDeviceConnected()
+    connected, _, status := t.isADBDeviceConnected()
     if !connected {
-        t.appendLog("=== Reboot to Recovery ===")
-        t.appendLog("❌ Operation Failed")
-        t.appendLog(fmt.Sprintf("Reason: %s", status))
+        t.appendLog("❌ Cannot reboot to recovery - no device detected")
+        t.appendLog(fmt.Sprintf("Status: %s", status))
         return
     }
 
-    t.appendLog("=== Rebooting to Recovery ===")
-    t.appendLog("⏳ Initiating recovery reboot sequence...")
-    cmd := exec.Command("adb", "reboot", "recovery")
-    if err := cmd.Run(); err != nil {
-        t.appendLog("❌ Reboot to recovery failed")
-        t.appendLog(fmt.Sprintf("Error: %v", err))
+    t.appendLog("🛠 Rebooting to recovery...")
+    err := exec.Command("adb", "reboot", "recovery").Run()
+    if err != nil {
+        t.appendLog(fmt.Sprintf("❌ Recovery reboot failed: %v", err))
         return
     }
-    t.appendLog("✅ Device is rebooting to recovery")
-    t.appendLog("Please wait for recovery mode...")
+
+    t.appendLog("✅ Recovery command sent")
 }
