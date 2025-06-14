@@ -135,3 +135,22 @@ func (t *FlashTool) isDeviceConnected() bool {
     output, err := cmd.CombinedOutput()
     return err == nil && len(output) > 0
 }
+
+//fastboot reboot
+func (t *FlashTool) fastbootReboot() {
+    if !t.isDeviceConnected() {
+        t.appendLog("Error: No device connected!")
+        return
+    }
+
+    cmd := exec.Command("fastboot", "reboot")
+    output, err := cmd.CombinedOutput()
+
+    if err != nil {
+        t.appendLog("Error rebooting device:")
+        t.appendLog(fmt.Sprintf("%s\nError details: %v", string(output), err))
+        return
+    }
+
+    t.appendLog("Device rebooted successfully.")
+}

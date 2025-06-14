@@ -53,6 +53,11 @@ Common codes to enable DM/DIAG mode (if needed):
     // Create ADB tab content
     adbTab := t.createADBTab()
 
+    // create samsung tab content
+   
+    
+    
+
     // Create tabs
     tabs := container.NewAppTabs(
         container.NewTabItem("Fastboot", fastbootTab),
@@ -86,7 +91,7 @@ Common codes to enable DM/DIAG mode (if needed):
     
     t.window.SetContent(content)
 }
-
+// Fastboot buttons and functionality
 func (t *FlashTool) createFastbootTab() fyne.CanvasObject {
     // Fastboot buttons
     fileButton := widget.NewButton("Select Batch File", func() {
@@ -122,15 +127,20 @@ func (t *FlashTool) createFastbootTab() fyne.CanvasObject {
         go t.getFastbootInfo()
     })
 
+    fbRebootButton := widget.NewButton("FB Reboot", func() {
+        t.logOutput.SetText("")
+        go t.fastbootReboot()
+    })
     // Create grid layout for fastboot buttons
-    return container.NewGridWithColumns(4,
+    return container.NewGridWithColumns(6,
         fileButton,
         executeButton,
         deviceButton,
         infoButton,
+        fbRebootButton,
     )
 }
-
+// adb buttons and functionality
 func (t *FlashTool) createADBTab() fyne.CanvasObject {
     // ADB buttons
     deviceButton := widget.NewButton("Check Device", func() {
@@ -169,6 +179,7 @@ func (t *FlashTool) createADBTab() fyne.CanvasObject {
     )
 }
 
+// samsung buttons and functionality
 
 
 
