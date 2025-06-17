@@ -30,15 +30,21 @@ Common codes to enable DM/DIAG mode (if needed):
 `)
     t.logOutput.Wrapping = fyne.TextWrapWord
 
-    // Create Fastboot tab content
-    fastbootTab := t.createFastbootTab()
+	// Create Android Tool tab content
+	androidToolTab := t.createAndroidToolTab()
 
     // Create ADB tab content
     adbTab := t.createADBTab()
 
+
+    // Create Fastboot tab content
+	fastbootTab := t.createFastbootTab()
+
+
     // Create tabs
     tabs := container.NewAppTabs(
         container.NewTabItem("Fastboot", fastbootTab),
+        container.NewTabItem("Android Tool", androidToolTab),
         container.NewTabItem("ADB", adbTab),
     )
     tabs.SetTabLocation(container.TabLocationTop)
@@ -53,16 +59,21 @@ Common codes to enable DM/DIAG mode (if needed):
     })
 
 	// name the window
-	t.window.SetTitle("RSZ Tool - Fastboot/ADB Utility")
+	t.window.SetTitle("RSZ Tool - EASY TO USE FLASH TOOL")
 	// Set window icon (optional)
-		 icon, _ := fyne.LoadResourceFromPath("./rsz_icon.png")
+	icon, _ := fyne.LoadResourceFromPath("./rsz_icon.png")
 	t.window.SetIcon(icon)
 
-
-    bottomButtons := container.NewHBox(
-        clearButton,
-        exitButton,
-    )
+	//text with link right side
+	bottomText := widget.NewLabel("MT MART - reTza")
+		
+	// button declared 
+	bottomButtons := container.NewHBox(
+		clearButton,
+		exitButton,
+		bottomText,
+		
+	)
 
     // Main content
     content := container.NewBorder(
@@ -75,6 +86,66 @@ Common codes to enable DM/DIAG mode (if needed):
     
     t.window.SetContent(content)
 }
+// Android Tool buttons and functionality
+func (t *FlashTool) createAndroidToolTab() fyne.CanvasObject {
+	// Android Tool buttons
+	backupButton := widget.NewButton("Backup", func() {
+		t.logOutput.SetText("")
+		go t.androidBackup()
+	})
+
+	restoreButton := widget.NewButton("Restore", func() {
+		t.logOutput.SetText("")
+		go t.androidRestore()
+	})
+
+	// Create grid layout for Android Tool buttons
+	return container.NewGridWithColumns(2,
+		backupButton,
+		restoreButton,
+	)
+}
+
+// adb buttons and functionality
+func (t *FlashTool) createADBTab() fyne.CanvasObject {
+    // ADB buttons
+    deviceButton := widget.NewButton("Check Device", func() {
+        t.logOutput.SetText("")
+        go t.checkADBDevice()
+    })
+
+    infoButton := widget.NewButton("Device Info", func() {
+        t.logOutput.SetText("")
+        go t.getADBInfo()
+    })
+
+    rebootButton := widget.NewButton("Reboot", func() {
+        go t.adbReboot()
+    })
+
+    rebootFastbootButton := widget.NewButton("Reboot Fastboot", func() {
+        go t.adbRebootFastboot()
+    })
+
+    rebootRecoveryButton := widget.NewButton("Reboot Recovery", func() {
+        go t.adbRebootRecovery()
+    })
+    diagButton := widget.NewButton("Enable DIAG", func() {
+        go t.adbEnableDiag()
+    })
+
+    // Create grid layout for ADB buttons
+    return container.NewGridWithColumns(6,
+        deviceButton,
+        infoButton,
+        rebootButton,
+        rebootFastbootButton,
+        rebootRecoveryButton,
+        diagButton,
+    )
+}
+
+
 
 // Fastboot buttons and functionality
 func (t *FlashTool) createFastbootTab() fyne.CanvasObject {
@@ -126,44 +197,8 @@ func (t *FlashTool) createFastbootTab() fyne.CanvasObject {
     )
 }
 
-// adb buttons and functionality
-func (t *FlashTool) createADBTab() fyne.CanvasObject {
-    // ADB buttons
-    deviceButton := widget.NewButton("Check Device", func() {
-        t.logOutput.SetText("")
-        go t.checkADBDevice()
-    })
 
-    infoButton := widget.NewButton("Device Info", func() {
-        t.logOutput.SetText("")
-        go t.getADBInfo()
-    })
 
-    rebootButton := widget.NewButton("Reboot", func() {
-        go t.adbReboot()
-    })
-
-    rebootFastbootButton := widget.NewButton("Reboot Fastboot", func() {
-        go t.adbRebootFastboot()
-    })
-
-    rebootRecoveryButton := widget.NewButton("Reboot Recovery", func() {
-        go t.adbRebootRecovery()
-    })
-    diagButton := widget.NewButton("Enable DIAG", func() {
-        go t.adbEnableDiag()
-    })
-
-    // Create grid layout for ADB buttons
-    return container.NewGridWithColumns(6,
-        deviceButton,
-        infoButton,
-        rebootButton,
-        rebootFastbootButton,
-        rebootRecoveryButton,
-        diagButton,
-    )
-}
 
 func (t *FlashTool) appendLog(message string) {
     currentText := t.logOutput.Text
