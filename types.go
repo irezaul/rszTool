@@ -52,6 +52,13 @@ Common codes to enable DM/DIAG mode (if needed):
         t.window.Close()
     })
 
+	// name the window
+	t.window.SetTitle("RSZ Tool - Fastboot/ADB Utility")
+	// Set window icon (optional)
+		 icon, _ := fyne.LoadResourceFromPath("./rsz_icon.png")
+	t.window.SetIcon(icon)
+
+
     bottomButtons := container.NewHBox(
         clearButton,
         exitButton,
