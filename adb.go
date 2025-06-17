@@ -53,22 +53,25 @@ func (t *FlashTool) adbEnableDiag() {
     // Run commands to attempt diag activation
     cmds := [][]string{
         {"shell", "am", "start", "-n", "com.longcheertel.midtest/com.longcheertel.midtest.Diag"},
-        
+        {"shell", "setprop", "sys.usb.config", "diag,adb"},
+        {"shell", "setprop", "vendor.usb.config", "diag,adb"},
     }
 
-    for _, args := range cmds {
-        err := exec.Command("adb", args...).Run()
+    for i, args := range cmds {
+        cmd := exec.Command("adb", args...)
+        err := cmd.Run()
         if err != nil {
-            t.appendLog(fmt.Sprintf("⚠️ Failed: adb %s", "Failed to connect"))
+            t.appendLog(fmt.Sprintf("⚠️ Command %d failed: %v", i+1, err))
         } else {
-            t.appendLog(fmt.Sprintf("✅ Success: adb %s",  "Enabled DIAG mode"))
+            t.appendLog(fmt.Sprintf("✅ Command %d executed successfully", i+1))
         }
     }
 
     time.Sleep(1 * time.Second)
 
-    // Verify that diag was enabled
-    out, err := exec.Command("shell", "am", "start", "-n", "com.longcheertel.midtest/com.longcheertel.midtest.Diag").CombinedOutput()
+    // Try to get USB config
+    cmd := exec.Command("adb", "shell", "getprop", "sys.usb.config")
+    out, err := cmd.CombinedOutput()
     if err == nil {
         value := strings.TrimSpace(string(out))
         t.appendLog(fmt.Sprintf("🔍 Current USB Config: %s", value))
@@ -80,7 +83,6 @@ func (t *FlashTool) adbEnableDiag() {
     }
 
     t.appendLog("📌 Tip: Check Windows Device Manager > Ports (COM) for Qualcomm DIAG port.")
-    
     t.appendLog("📌 Note: This method works only on some Qualcomm devices (no root needed).")
 }
 
@@ -137,9 +139,11 @@ func (t *FlashTool) getADBInfo() {
                 lines := strings.Split(string(out), "\n")
                 for _, line := range lines {
                     if strings.Contains(line, "level:") {
-                        value = strings.Split(line, ":")[1]
-                        value = strings.TrimSpace(value) + "%"
-                        break
+                        parts := strings.Split(line, ":")
+                        if len(parts) >= 2 {
+                            value = strings.TrimSpace(parts[1]) + "%"
+                            break
+                        }
                     }
                 }
             }

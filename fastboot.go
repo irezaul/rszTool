@@ -43,8 +43,6 @@ func (t *FlashTool) getFastbootInfo() {
         label    string
         varNames []string
     }{
-        
-     
         {"Device Model", []string{"product", "device", "model", "product-name"}},
         {"Android Version", []string{"version", "build-version"}},
         {"Anti Number", []string{"anti"}},
@@ -52,7 +50,6 @@ func (t *FlashTool) getFastbootInfo() {
         {"Security Patch", []string{"current-slot"}},
         {"Software Version", []string{"version-baseband", "version-software"}},
         {"Root Access", []string{"secure"}},
-        
     }
 
     // Get and display information
@@ -66,9 +63,6 @@ func (t *FlashTool) getFastbootInfo() {
         }
         t.appendLog(fmt.Sprintf("%-20s: %s", v.label, value))
     }
-
-    // Additional device details
-   
 
     // Calculate execution time
     executionTime := time.Since(startTime)
@@ -136,7 +130,7 @@ func (t *FlashTool) isDeviceConnected() bool {
     return err == nil && len(output) > 0
 }
 
-//fastboot reboot
+// Fastboot reboot
 func (t *FlashTool) fastbootReboot() {
     if !t.isDeviceConnected() {
         t.appendLog("Error: No device connected!")
@@ -153,4 +147,53 @@ func (t *FlashTool) fastbootReboot() {
     }
 
     t.appendLog("Device rebooted successfully.")
+}
+
+// Fastboot unlock bootloader
+func (t *FlashTool) fastbootUnlock() {
+    if !t.isDeviceConnected() {
+        t.appendLog("❌ No device connected!")
+        return
+    }
+
+    t.appendLog("🔓 Attempting to unlock bootloader...")
+    t.appendLog("⚠️ WARNING: This will WIPE ALL DATA on your device!")
+    t.appendLog("⚠️ Make sure you have a backup of important data!")
+    
+    t.appendLog("\n🔍 Checking unlock status...")
+    
+    // Check if already unlocked
+    cmd := exec.Command("fastboot", "getvar", "unlocked")
+    output, err := cmd.CombinedOutput()
+    
+    if err == nil {
+        if strings.Contains(string(output), "unlocked: yes") {
+            t.appendLog("✅ Bootloader is already unlocked!")
+            return
+        }
+    }
+    
+    // Try standard unlock command
+    t.appendLog("🚀 Executing unlock command...")
+    cmd = exec.Command("fastboot", "oem", "unlock")
+    output, err = cmd.CombinedOutput()
+    
+    if err != nil {
+        t.appendLog("❌ Standard unlock failed, trying alternative...")
+        // Try alternative unlock command
+        cmd = exec.Command("fastboot", "flashing", "unlock")
+        output, err = cmd.CombinedOutput()
+        
+        if err != nil {
+            t.appendLog("❌ Unlock failed!")
+            t.appendLog(fmt.Sprintf("Error: %v", err))
+            t.appendLog("📌 Note: Make sure OEM unlocking is enabled in Developer Options")
+            return
+        }
+    }
+    
+    t.appendLog("✅ Unlock command sent successfully!")
+    t.appendLog("📱 Please check your device screen for confirmation")
+    t.appendLog("🔽 Use Volume keys to navigate and Power to confirm")
+    t.appendLog("\n" + string(output))
 }
