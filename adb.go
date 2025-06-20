@@ -121,12 +121,20 @@ func (t *FlashTool) getADBInfo() {
     }{
         {"Brand", "ro.product.brand"},
         {"Model", "ro.product.model"},
+        {"Phone Model ", "ro.product.odm.marketname"},
         {"Device", "ro.product.device"},
+        {"Firmrware State ", "ro.product.mod_device"},
+        {"CPU", "ro.boot.hardware"},
+        {"Manufacturer", "ro.product.system_ext.manufacturer"},
         {"Android Version", "ro.build.version.release"},
-        {"Build Number", "ro.build.display.id"},
+        {"Build Number", "ro.system_ext.build.version.incremental"},
         {"Security Patch", "ro.build.version.security_patch"},
         {"CPU", "ro.product.cpu.abi"},
-        {"Bootloader", "ro.bootloader"},
+        {"Bootloader", "ro.secureboot.lockstate"},
+        {"imei-1", "ro.ril.oem.imei"},
+        {"imei-2", "ro.ril.oem.imei2"},
+        {"IMEI", "ro.ril.miui.imei0"}, // fallback for some devices
+        {"IMEI2", "ro.ril.miui.imei1"}, // fallback for some devices
         {"Battery Level", ""}, // special case
     }
 
