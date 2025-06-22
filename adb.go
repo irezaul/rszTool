@@ -121,10 +121,12 @@ func (t *FlashTool) getADBInfo() {
     }{
         {"Brand", "ro.product.brand"},
         {"Model", "ro.product.model"},
-        {"Phone Model ", "ro.product.odm.marketname"},
+        {"Phone Model ", "ro.product.odm.marketname",},
+        {"Eng_firmware", "ro.boot.product.hardware.sku"},
         {"Device", "ro.product.device"},
         {"Firmrware State ", "ro.product.mod_device"},
         {"CPU", "ro.boot.hardware"},
+        {"Harware Level", "ro.boot.hwlevel"},
         {"Manufacturer", "ro.product.system_ext.manufacturer"},
         {"Android Version", "ro.build.version.release"},
         {"Build Number", "ro.system_ext.build.version.incremental"},
