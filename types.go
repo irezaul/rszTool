@@ -20,13 +20,20 @@ func (t *FlashTool) createUI() {
     t.logOutput = widget.NewMultiLineEntry()
     t.logOutput.SetPlaceHolder(`Logs will appear here...
 
-Common codes to enable DM/DIAG mode (if needed):
-
-*#*#717717#*#*  (Common for Xiaomi/Redmi)
-
-*#*#83781#*#*   (Huawei)
-
-*#*#4636#*#* Phone Info → Turn on "DM Mode"
+    --------------------------------------------
+                  DIAG CODES              
+    --------------------------------------------
+ Oppo    : *#801# or *#8011#
+ Xiaomi  : ##717717## or  ##13491##  or  *#*#73694364#*#*
+ Lenovo  : ##717717## or ##13491## or *#*#8899#*#*
+ Vivo    : #558# or ##717717##*
+ Infinix : ####8789#
+ Asus    : ##3646633## or ##9860##
+ Huawei  : *#*#2846579#*#* or *#*#1357946#*#*
+ OnePlus : *#*#4636#*#* or *#*#197328640#*#*
+ Samsung : *#*#4636#*#* or *#*#197328640#*#*
+ Motorola: *#*#4636#*#* or *#*#197328640#*#*
+    --------------------------------------------
 `)
     t.logOutput.Wrapping = fyne.TextWrapWord
 

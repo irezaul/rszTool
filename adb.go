@@ -121,23 +121,45 @@ func (t *FlashTool) getADBInfo() {
     }{
         {"Brand", "ro.product.brand"},
         {"Model", "ro.product.model"},
-        {"Phone Model ", "ro.product.odm.marketname",},
-        {"Eng_firmware", "ro.boot.product.hardware.sku"},
+        {"Phone Model", "ro.product.odm.marketname"},
         {"Device", "ro.product.device"},
-        {"Firmrware State ", "ro.product.mod_device"},
+        {"Region", "ro.miui.build.region"},
+        {"Firmware State", "ro.product.mod_device"},
         {"CPU", "ro.boot.hardware"},
-        {"Harware Level", "ro.boot.hwlevel"},
+        {"Hardware Level", "ro.boot.hwlevel"},
         {"Manufacturer", "ro.product.system_ext.manufacturer"},
         {"Android Version", "ro.build.version.release"},
         {"Build Number", "ro.system_ext.build.version.incremental"},
         {"Security Patch", "ro.build.version.security_patch"},
-        {"CPU", "ro.product.cpu.abi"},
+        {"CPU-Product", "ro.product.cpu.abi"},
         {"Bootloader", "ro.secureboot.lockstate"},
         {"imei-1", "ro.ril.oem.imei"},
         {"imei-2", "ro.ril.oem.imei2"},
-        {"IMEI", "ro.ril.miui.imei0"}, // fallback for some devices
-        {"IMEI2", "ro.ril.miui.imei1"}, // fallback for some devices
-        {"Battery Level", ""}, // special case
+        {"IMEI", "ro.ril.miui.imei0"},
+        {"IMEI2", "ro.ril.miui.imei1"},
+        {"Battery Level", ""},
+    }
+
+    labelFormat := map[string]string{
+        "Brand":           "%-21s: %s",
+        "Model":           "%-21s: %s",
+        "Phone Model":     "%-15s: %s",
+        "Device":          "%-21s: %s",
+        "Region":          "%-21s: %s",
+        "Firmware State":  "%-15s: %s",
+        "CPU":             "%-24s: %s",
+        "Hardware Level":  "%-15s: %s",
+        "Manufacturer":    "%-21s: %s",
+        "Android Version": "%-20s: %s",
+        "Build Number":    "%-20s: %s",
+        "Security Patch":  "%-22s: %s",
+        "CPU-Product":     "%-20s: %s",
+        "Bootloader":      "%-21s: %s",
+        "imei-1":          "%-26s: %s",
+        "imei-2":          "%-26s: %s",
+        "IMEI":            "%-26s: %s",
+        "IMEI2":           "%-25s: %s",
+        "Battery Level":   "%-20s: %s",
     }
 
     for _, prop := range props {
@@ -164,17 +186,18 @@ func (t *FlashTool) getADBInfo() {
             }
         }
 
-        if value == "" {
-            value = "Unknown"
+        if value != "" && value != "Unknown" {
+            format, exists := labelFormat[prop.Label]
+            if !exists {
+                format = "%-20s: %s"  // default format if not specified
+            }
+            t.appendLog(fmt.Sprintf(format, prop.Label, value))
         }
-
-        t.appendLog(fmt.Sprintf("%-18s: %s", prop.Label, value))
     }
 
     elapsed := time.Since(start)
     t.appendLog(fmt.Sprintf("\n✅ Info retrieved in %.2fs", elapsed.Seconds()))
 }
-
 // ✅ Reboot normally
 func (t *FlashTool) adbReboot() {
     t.logOutput.SetText("")
